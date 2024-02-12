@@ -9,7 +9,9 @@ app.use(express.json());
 // Connect to MongoDB Atlas
 mongoose.connect('mongodb+srv://ujjan:BbsA6jwwtZzXWBIn@cluster0.vbu4qnb.mongodb.net/School?retryWrites=true&w=majority', {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    useCreateIndex: true, // Added for index creation
+    useFindAndModify: false // Added to disable deprecated functions
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('Error connecting to MongoDB:', err));
@@ -17,9 +19,9 @@ mongoose.connect('mongodb+srv://ujjan:BbsA6jwwtZzXWBIn@cluster0.vbu4qnb.mongodb.
 // Define Schema and Model for MongoDB
 const { Schema } = mongoose;
 const schoolSchema = new Schema({
-    name: String,
-    detail: String,
-    imageUrl: String // Add imageUrl field to store image URL
+    name: { type: String, required: true }, // Added validation for required fields
+    detail: { type: String, maxLength: 250 }, // Added validation for maximum length
+    imageUrl: { type: String, required: true } // Added validation for required fields
 });
 const School = mongoose.model('School', schoolSchema);
 
@@ -27,12 +29,6 @@ const School = mongoose.model('School', schoolSchema);
 app.post('/api/schools', async (req, res) => {
     try {
         const { name, detail, imageUrl } = req.body;
-        if (!name || !detail || !imageUrl) {
-            return res.status(400).json({ error: 'Name, detail, and imageUrl are required' });
-        }
-        if (detail.length > 250) {
-            return res.status(400).json({ error: 'Detail must be less than 250 characters' });
-        }
         const school = new School({ name, detail, imageUrl });
         await school.save();
         res.status(201).json(school);
@@ -44,7 +40,7 @@ app.post('/api/schools', async (req, res) => {
 
 app.get('/api/schools', async (req, res) => {
     try {
-        const schools = await School.find();
+        const schools = await School.find().lean(); // Using lean() for faster data retrieval
         res.json(schools);
     } catch (error) {
         console.error('Error fetching schools:', error);
